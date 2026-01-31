@@ -45,9 +45,9 @@ class DimManager {
             return
         }
         
-        let color = NSColor.black.withAlphaComponent(CGFloat(DimManager.sharedInstance.setting.alpha/100.0))
-        
-        DimManager.sharedInstance.windows(color: color, withDelay: withDelay) { [weak self] windows in
+        let intensity = max(0.0, min(1.0, CGFloat(DimManager.sharedInstance.setting.alpha / 100.0)))
+
+        DimManager.sharedInstance.windows(intensity: intensity, withDelay: withDelay) { [weak self] windows in
             guard let strongSelf = self else {return}
             strongSelf.removeAllOverlay()
             strongSelf.windows = windows
@@ -59,8 +59,9 @@ class DimManager {
     }
     
     func adjustDimmingLevel(alpha: Double) {
+        let intensity = max(0.0, min(1.0, CGFloat(alpha / 100.0)))
         for overlayWindow in self.windows {
-            overlayWindow.backgroundColor = NSColor.black.withAlphaComponent(CGFloat(alpha/100.0))
+            overlayWindow.alphaValue = intensity
         }
     }
 }
@@ -71,7 +72,7 @@ extension DimManager {
         return NSWorkspace.shared.frontmostApplication
     }
     
-    private func windows(color: NSColor, withDelay: Bool, didCreateWindows: @escaping ([NSWindow])->()) {
+    private func windows(intensity: CGFloat, withDelay: Bool, didCreateWindows: @escaping ([NSWindow])->()) {
         let delay = withDelay ? 0.2 : 0
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             guard let strongSelf = self else {return}
@@ -79,23 +80,33 @@ extension DimManager {
             
             let screens = NSScreen.screens
             let windows = screens.map { screen in
-                return strongSelf.windowForScreen(screen: screen, windowInfos: windowInfos, color: color)
+                return strongSelf.windowForScreen(screen: screen, windowInfos: windowInfos, intensity: intensity)
             }
             
             didCreateWindows(windows)
         }
     }
     
-    private func windowForScreen(screen: NSScreen, windowInfos: [WindowInfo], color: NSColor) -> NSWindow {
+    private func windowForScreen(screen: NSScreen, windowInfos: [WindowInfo], intensity: CGFloat) -> NSWindow {
         
         let frame = NSRect(origin: .zero, size: screen.frame.size)
         let overlayWindow = NSWindow.init(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false, screen: screen)
         overlayWindow.isReleasedWhenClosed = false
         overlayWindow.animationBehavior = .none
-        overlayWindow.backgroundColor = color
+        overlayWindow.backgroundColor = .clear
+        overlayWindow.isOpaque = false
+        overlayWindow.hasShadow = false
+        overlayWindow.alphaValue = intensity
         overlayWindow.ignoresMouseEvents = true
         overlayWindow.collectionBehavior = [.transient, .fullScreenNone]
         overlayWindow.level = .normal
+
+        let effectView = NSVisualEffectView(frame: frame)
+        effectView.autoresizingMask = [.width, .height]
+        effectView.material = .fullScreenUI
+        effectView.blendingMode = .behindWindow
+        effectView.state = .active
+        overlayWindow.contentView = effectView
         
         var windowNumber = 0
         switch self.setting.dimMode {
@@ -104,12 +115,15 @@ extension DimManager {
         case .parallel:
             // Get frontmost window of each screen
             let newScreen = NSRect(x: screen.frame.minX, y: NSScreen.screens[0].frame.maxY - screen.frame.maxY, width: screen.frame.width, height: screen.frame.height)
-            let windowInfo = windowInfos.first(where: {
-                return  newScreen.minX <= $0.bounds!.midX &&
-                    newScreen.maxX >= $0.bounds!.midX &&
-                    newScreen.minY <= $0.bounds!.midY &&
-                    newScreen.maxY >= $0.bounds!.midY
-            })
+            let windowInfo = windowInfos.first { info in
+                guard let bounds = info.bounds else { return false }
+                let midX = bounds.midX
+                let midY = bounds.midY
+                return newScreen.minX <= midX &&
+                    newScreen.maxX >= midX &&
+                    newScreen.minY <= midY &&
+                    newScreen.maxY >= midY
+            }
             
             windowNumber = windowInfo?.number ?? 0
         }

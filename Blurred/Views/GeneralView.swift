@@ -22,7 +22,7 @@ struct GeneralView: View {
                 ZStack {
                     Image("desktop")
                         .resizable()
-                        .overlay(Color.black.opacity(self.setting.isEnabled ? self.setting.alpha/100.0 : 0))
+                        .blur(radius: self.setting.isEnabled ? CGFloat(self.setting.alpha) / 5.0 : 0)
                         .cornerRadius(4)
                     
                     Image("window")
