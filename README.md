@@ -25,19 +25,25 @@ A macOS utility that helps reduce distraction by dimming your inactive noise
 
 ## 🚀 Install
 
-[![AppStore](misc/appstore.svg)](https://apps.apple.com/us/app/blurred/id1497527363)
+> **Note:** This is a fork of the original Blurred application and is not available on the App Store or through Homebrew.
 
-#### Using Homebrew
+#### Setup using install.command
 
-```
-brew cask install blurred
-```
+1. Clone or download this repository
+2. Navigate to the repository directory
+3. Run the `install.command` script:
+   ```
+   ./install.command
+   ```
+4. The application will be built and installed to your Applications folder
 
-#### Manual download
+#### Manual setup
 
-- [Download latest version](https://github.com/dwarvesf/Blurred/releases/latest)
-- Unzip and drag the app to the Applications folder
-- Right click and press open in context menu to open app
+Alternatively, you can:
+- Open `Blurred.xcodeproj` in Xcode
+- Select the Blurred scheme and target
+- Build and run the project
+- Drag the built app to your Applications folder
 
 ## 🕹 Usage
 
